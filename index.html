@@ -103,8 +103,8 @@
     const res = await fetch(SHEET_API_URL);
     const data = await res.json();
 
-    let lemonRow = data.find(row => row.팀 === "Lemon");
-    let planRow  = data.find(row => row.팀 === "Plan");
+    let lemonRow = data.find(row => row.Team === "Lemon");
+    let planRow  = data.find(row => row.Team === "Plan");
 
     let lemon = parseInt(lemonRow.count);
     let plan  = parseInt(planRow.count);
@@ -118,8 +118,8 @@
         "Content-Type": "application/json"
       },
       body: JSON.stringify([
-        { "팀": "Lemon", "count": lemon },
-        { "팀": "Plan",  "count": plan  }
+        { "Team": "Lemon", "count": lemon },
+        { "Team": "Plan",  "count": plan  }
       ])
     });
 
@@ -133,8 +133,8 @@
       const res = await fetch(SHEET_API_URL);
       const data = await res.json();
 
-      const lemonRow = data.find(row => row.팀 === "Lemon");
-      const planRow  = data.find(row => row.팀 === "Plan");
+      const lemonRow = data.find(row => row.Team === "Lemon");
+      const planRow  = data.find(row => row.Team === "Plan");
 
       lemonCount = parseInt(lemonRow.count);
       planCount = parseInt(planRow.count);
