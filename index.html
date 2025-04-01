@@ -2,26 +2,23 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>에너지파 경합</title>
+  <title>에너지파 대결</title>
   <style>
-    /* 전투 영역 컨테이너 */
     #battle-container {
-      width: 900px;         
+      width: 900px;
       margin: 0 auto;
       position: relative;
     }
 
-    /* 9칸 가로나열 */
     #battle-row {
       display: flex;
-      width: 100%;    
+      width: 100%;
       box-sizing: border-box;
     }
 
-    /* 각 칸 스타일 */
     .cell {
-      flex: 0 0 100px;  
-      height: 150px;    
+      flex: 0 0 100px;
+      height: 150px;
       position: relative;
       overflow: hidden;
     }
@@ -30,40 +27,39 @@
       max-width: 100%;
       max-height: 100%;
       position: absolute;
-      left: 50%; top: 50%;
+      left: 50%;
+      top: 50%;
       transform: translate(-50%, -50%);
     }
 
-    /* 버튼 스타일: 가려지지 않도록 z-index 크게 */
     button {
       position: absolute;
       z-index: 10;
     }
-    /* 왼쪽 버튼(레몬) - 캐릭터 아래쪽 */
+
     #btn-lemon {
       left: 0;
-      bottom: 0;   
+      bottom: 0;
       margin: 10px;
     }
-    /* 오른쪽 버튼(플랜) - 캐릭터 아래쪽 */
+
     #btn-plan {
       right: 0;
       bottom: 0;
       margin: 10px;
     }
 
-    /* 가운데 비율, 표 수 텍스트 (고딕체, 크게) */
     #info, #countInfo {
       text-align: center;
       font-family: sans-serif;
       font-weight: bold;
-      margin: 5px 0; 
+      margin: 5px 0;
     }
-    /* 퍼센트는 좀 더 크게 */
+
     #info {
       font-size: 24px;
     }
-    /* 실제 투표 수는 조금 작게 */
+
     #countInfo {
       font-size: 20px;
     }
@@ -72,7 +68,6 @@
 <body>
 
 <div id="battle-container">
-  <!-- 9칸 영역 -->
   <div id="battle-row">
     <div id="cell1" class="cell"></div>
     <div id="cell2" class="cell"></div>
@@ -85,81 +80,101 @@
     <div id="cell9" class="cell"></div>
   </div>
 
-  <!-- 왼쪽 버튼 (Lemon) -->
   <button id="btn-lemon" onclick="vote('Lemon')">Vote to Lemon</button>
-  <!-- 오른쪽 버튼 (Plan) -->
   <button id="btn-plan" onclick="vote('Plan')">Vote to Plan</button>
 </div>
 
-<!-- 가운데 비율 표시 -->
 <div id="info"></div>
-<!-- 가운데 투표 수 표시 -->
 <div id="countInfo"></div>
 
 <script>
-  /* 이미지 경로 (필요 시 수정) */
-  const LEMON_CHA_SRC   = "A_Cha.gif";   
-  const LEMON_SHOOT_SRC = "A_Shoot.gif";
-  const CRASH_SRC       = "ABCrash.gif"; 
-  const PLAN_SHOOT_SRC  = "B_Shoot.gif"; 
-  const PLAN_CHA_SRC    = "B_Cha.gif";   
+  const SHEET_API_URL = "https://api.sheetbest.com/sheets/8280553a-d996-40ad-8429-61ef209a589e";
 
-  // Lemon / Plan 표수
+  const LEMON_CHA_SRC   = "A_Cha.gif";
+  const LEMON_SHOOT_SRC = "A_Shoot.gif";
+  const CRASH_SRC       = "ABCrash.gif";
+  const PLAN_SHOOT_SRC  = "B_Shoot.gif";
+  const PLAN_CHA_SRC    = "B_Cha.gif";
+
   let lemonCount = 0;
   let planCount = 0;
 
-  // 버튼 클릭
-  function vote(who) {
-    if (who === 'Lemon') {
-      lemonCount++;
-    } else {
-      planCount++;
-    }
+  async function vote(who) {
+    const res = await fetch(SHEET_API_URL);
+    const data = await res.json();
+
+    let lemonRow = data.find(row => row.팀 === "Lemon");
+    let planRow  = data.find(row => row.팀 === "Plan");
+
+    let lemon = parseInt(lemonRow.count);
+    let plan  = parseInt(planRow.count);
+
+    if (who === "Lemon") lemon++;
+    else if (who === "Plan") plan++;
+
+    await fetch(SHEET_API_URL, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify([
+        { "팀": "Lemon", "count": lemon },
+        { "팀": "Plan",  "count": plan  }
+      ])
+    });
+
+    lemonCount = lemon;
+    planCount = plan;
     updateBattle();
   }
 
-  // 화면 갱신
+  async function fetchVotes() {
+    try {
+      const res = await fetch(SHEET_API_URL);
+      const data = await res.json();
+
+      const lemonRow = data.find(row => row.팀 === "Lemon");
+      const planRow  = data.find(row => row.팀 === "Plan");
+
+      lemonCount = parseInt(lemonRow.count);
+      planCount = parseInt(planRow.count);
+      updateBattle();
+    } catch (err) {
+      console.error("투표 데이터를 불러올 수 없습니다:", err);
+    }
+  }
+
   function updateBattle() {
-    // 비율 계산
     let total = lemonCount + planCount;
     if (total === 0) total = 1;
-    const ratio = lemonCount / total; 
+    const ratio = lemonCount / total;
 
-    // 충돌 지점(2~8)
     let collisionIndex = 2 + Math.floor((8 - 2) * ratio + 0.5);
     if (collisionIndex < 2) collisionIndex = 2;
     if (collisionIndex > 8) collisionIndex = 8;
 
-    // 칸 초기화
     clearCells();
 
-    // 1번 칸 = Lemon 캐릭터, 9번 칸 = Plan 캐릭터
     setCellContent(1, LEMON_CHA_SRC);
     setCellContent(9, PLAN_CHA_SRC);
 
-    // 충돌 지점 왼쪽 = Lemon 에너지파
     for (let i = 2; i < collisionIndex; i++) {
       setCellContent(i, LEMON_SHOOT_SRC);
     }
-    // 충돌 지점
+
     setCellContent(collisionIndex, CRASH_SRC);
-    // 충돌 지점 오른쪽 = Plan 에너지파
+
     for (let i = collisionIndex + 1; i <= 8; i++) {
       setCellContent(i, PLAN_SHOOT_SRC);
     }
 
-    // 퍼센트 표시
     const lemonPercent = (ratio * 100).toFixed(1);
     const planPercent  = (100 - lemonPercent).toFixed(1);
-    document.getElementById("info").textContent = 
-      `${lemonPercent}% : ${planPercent}%`;
 
-    // 투표 수 표시
-    document.getElementById("countInfo").textContent = 
-      `${lemonCount} : ${planCount}`;
+    document.getElementById("info").textContent = `${lemonPercent}% : ${planPercent}%`;
+    document.getElementById("countInfo").textContent = `${lemonCount} : ${planCount}`;
   }
 
-  // 칸에 이미지 배치
   function setCellContent(cellNumber, imgSrc) {
     const cell = document.getElementById("cell" + cellNumber);
     if (!cell) return;
@@ -168,7 +183,6 @@
     cell.appendChild(img);
   }
 
-  // 칸 이미지 모두 지우기
   function clearCells() {
     for (let i = 1; i <= 9; i++) {
       const cell = document.getElementById("cell" + i);
@@ -178,8 +192,11 @@
     }
   }
 
-  // 초기상태(0:0 => 50% : 50%)
-  updateBattle();
+  // 최초 1회 가져오기
+  fetchVotes();
+
+  // 3초마다 최신 투표 반영
+  setInterval(fetchVotes, 3000);
 </script>
 
 </body>
